@@ -1,39 +1,39 @@
 ```groovy
 
-pipeline{
+pipeline {
     agent any
-    tools{
-        jdk 'jdk17'
-        nodejs 'node16'
+    tools {
+        jdk 'jdk'
+        nodejs 'nodejs'
     }
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar'
     }
     stages {
-        stage('clean workspace'){
-            steps{
+        stage('clean workspace') {
+            steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git'){
-            steps{
-                git branch: 'main', url: 'https://github.com/abhipraydhoble/netflix.git'
+        stage('Checkout from Git') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Gaurav1251/Netflix-cicd'
             }
         }
-        stage("Sonarqube Analysis "){
-            steps{
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix '''
+        stage("Sonarqube Analysis") {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
+                    -Dsonar.projectKey=Netflix'''
                 }
             }
         }
-        stage("quality gate"){
-           steps {
+        stage("quality gate") {
+            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar'
                 }
-            } 
+            }
         }
         stage('Install Dependencies') {
             steps {
@@ -46,29 +46,34 @@ pipeline{
                 sh "trivy fs . > trivyfs.txt"
             }
         }
+        
         stage("Docker Build & Push"){
             steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker'){   
-                       sh "docker build --build-arg TMDB_V3_API_KEY=9cbb1c218810ea9200b06c2fdda3bad0 -t netflix ."
-                       sh "docker tag netflix abhipraydh96/netflix:a1 "
-                       sh "docker push abhipraydh96/netflix:a1 "
+                   
+                   
+                    withCredentials([usernamePassword(credentialsId: 'docker', passwordVariable: 'p', usernameVariable: 'u')]) {
+                        sh "docker login -u ${env.u} -p ${env.p}"
+                        sh "docker build --build-arg TMDB_V3_API_KEY=dcbb962f2e5980149bf0a562c396ff0b -t gaurav1251/netflix ."
+                        
+                        sh "docker push gaurav1251/netflix:latest "
+    
                     }
-                }
+                    
+                
             }
         }
+        
         stage("TRIVY"){
             steps{
-                sh "trivy image abhipraydh96/netflix:a1 > trivyimage.txt" 
+                sh "trivy image gaurav1251/netflix:latest > trivyimage.txt" 
             }
         }
+        
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d --name netflix -p 8081:80 abhipraydh96/netflix:a1'
+                sh 'docker run -d --name netflix -p 8081:80 gaurav1251/netflix:latest'
             }
         }
     }
 }
-
-
 ```

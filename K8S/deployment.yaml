@@ -16,4 +16,4 @@ spec:
       - name: netflix
         image: gaurav1251/netflix:latest
         ports:
-        - containerPort: 3000  # Port your application listens on
+        - containerPort: 80  # Port your application listens on
